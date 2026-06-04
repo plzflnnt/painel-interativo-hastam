@@ -31,6 +31,37 @@ export async function getDatabase() {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS vendedores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS canais_origem (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS vendas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      categoria TEXT NOT NULL CHECK(categoria IN ('importacao', 'estoque')),
+      modelo_carro TEXT NOT NULL,
+      vendedor_id INTEGER NOT NULL,
+      origem_id INTEGER NOT NULL,
+      valor INTEGER NOT NULL,
+      data_venda DATETIME NOT NULL,
+      FOREIGN KEY (vendedor_id) REFERENCES vendedores(id),
+      FOREIGN KEY (origem_id) REFERENCES canais_origem(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS metas (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      mes INTEGER NOT NULL CHECK(mes >= 1 AND mes <= 12),
+      ano INTEGER NOT NULL,
+      qtd_carros_importacao INTEGER NOT NULL,
+      valor_meta_estoque INTEGER NOT NULL,
+      UNIQUE(mes, ano)
+    );
   `);
 
   return dbInstance;
