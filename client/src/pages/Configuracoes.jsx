@@ -18,31 +18,10 @@ export default function Configuracoes() {
   const [qtdImportacao, setQtdImportacao] = useState('');
   const [valorEstoque, setValorEstoque] = useState('');
 
-  // Vendas states
-  const [vendaCategoria, setVendaCategoria] = useState('importacao');
-  const [vendaModeloCarro, setVendaModeloCarro] = useState('');
-  const [vendaVendedorId, setVendaVendedorId] = useState('');
-  const [vendaOrigemId, setVendaOrigemId] = useState('');
-  const [vendaValor, setVendaValor] = useState('');
-  const [vendaData, setVendaData] = useState(new Date().toISOString().substring(0, 10));
-
   // Export states
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [tsvOutput, setTsvOutput] = useState('');
-
-  // Auto-selection effects for lists loading
-  useEffect(() => {
-    if (vendedores.length > 0 && !vendaVendedorId) {
-      setVendaVendedorId(vendedores[0].id);
-    }
-  }, [vendedores, vendaVendedorId]);
-
-  useEffect(() => {
-    if (canais.length > 0 && !vendaOrigemId) {
-      setVendaOrigemId(canais[0].id);
-    }
-  }, [canais, vendaOrigemId]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -246,61 +225,7 @@ export default function Configuracoes() {
     }
   };
 
-  const handleVendaValorChange = (e) => {
-    const clean = e.target.value.replace(/\D/g, '');
-    if (!clean) {
-      setVendaValor('');
-      return;
-    }
-    const formatted = new Intl.NumberFormat('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(parseFloat(clean) / 100);
-    setVendaValor(formatted);
-  };
 
-  const handleSaveVenda = async (e) => {
-    e.preventDefault();
-    if (!vendaCategoria || !vendaModeloCarro.trim() || !vendaVendedorId || !vendaOrigemId || !vendaValor) {
-      showNotification('Preencha todos os campos obrigatórios da venda.', 'error');
-      return;
-    }
-
-    const valorReais = parseFloat(vendaValor.replace(/\./g, '').replace(',', '.'));
-    if (isNaN(valorReais) || valorReais <= 0) {
-      showNotification('Valor da venda inválido.', 'error');
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/vendas', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          categoria: vendaCategoria,
-          modelo_carro: vendaModeloCarro.trim(),
-          vendedor_id: parseInt(vendaVendedorId, 10),
-          origem_id: parseInt(vendaOrigemId, 10),
-          valor: valorReais,
-          data_venda: vendaData ? `${vendaData} 12:00:00` : undefined
-        })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Erro ao salvar venda.');
-
-      showNotification('Venda cadastrada com sucesso!');
-      setVendaModeloCarro('');
-      setVendaValor('');
-      setVendaData(new Date().toISOString().substring(0, 10));
-      fetchData();
-    } catch (err) {
-      showNotification(err.message, 'error');
-    }
-  };
 
   // Generate TSV Data for export
   const handleExportData = async () => {
@@ -375,6 +300,14 @@ export default function Configuracoes() {
               }`}
             >
               Dashboard
+            </Link>
+            <Link 
+              to="/vendas" 
+              className={`text-xs uppercase tracking-wider font-semibold transition-colors ${
+                location.pathname === '/vendas' ? 'text-amber-500' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              Vendas
             </Link>
             <Link 
               to="/configuracoes" 
@@ -634,110 +567,6 @@ export default function Configuracoes() {
               </form>
             </GlassCard>
 
-            {/* Cadastrar Nova Venda Card */}
-            <GlassCard hover={false} className="border border-zinc-900 shadow-xl">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-zinc-200 mb-6">Cadastrar Nova Venda</h3>
-              
-              <form onSubmit={handleSaveVenda} className="space-y-4">
-                
-                {/* Categoria Selection */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Categoria</label>
-                  <select
-                    value={vendaCategoria}
-                    onChange={(e) => setVendaCategoria(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-500/80 transition-all text-xs"
-                  >
-                    <option value="importacao" className="bg-zinc-950">Importação</option>
-                    <option value="estoque" className="bg-zinc-950">Estoque da Loja</option>
-                  </select>
-                </div>
-
-                {/* Modelo do Carro */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Modelo do Carro</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: Porsche 911 Turbo S"
-                    value={vendaModeloCarro}
-                    onChange={(e) => setVendaModeloCarro(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-700 focus:outline-none focus:border-amber-500/80 transition-all text-xs"
-                  />
-                </div>
-
-                {/* Vendedor Selection */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Vendedor</label>
-                  <select
-                    value={vendaVendedorId}
-                    onChange={(e) => setVendaVendedorId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-500/80 transition-all text-xs"
-                  >
-                    {vendedores.length === 0 ? (
-                      <option value="" className="bg-zinc-950">Nenhum vendedor cadastrado</option>
-                    ) : (
-                      vendedores.map(v => (
-                        <option key={v.id} value={v.id} className="bg-zinc-950">{v.nome}</option>
-                      ))
-                    )}
-                  </select>
-                </div>
-
-                {/* Canal de Origem Selection */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Canal de Origem</label>
-                  <select
-                    value={vendaOrigemId}
-                    onChange={(e) => setVendaOrigemId(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-500/80 transition-all text-xs"
-                  >
-                    {canais.length === 0 ? (
-                      <option value="" className="bg-zinc-950">Nenhum canal cadastrado</option>
-                    ) : (
-                      canais.map(c => (
-                        <option key={c.id} value={c.id} className="bg-zinc-950">{c.nome}</option>
-                      ))
-                    )}
-                  </select>
-                </div>
-
-                {/* Valor da Venda */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Valor da Venda (R$)</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: 150.000,00"
-                    value={vendaValor}
-                    onChange={handleVendaValorChange}
-                    className="w-full px-3 py-2.5 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-700 focus:outline-none focus:border-amber-500/80 transition-all text-xs"
-                  />
-                </div>
-
-                {/* Data da Venda */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Data da Venda</label>
-                  <input
-                    type="date"
-                    required
-                    value={vendaData}
-                    onChange={(e) => setVendaData(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-zinc-900/60 border border-zinc-800 rounded-xl text-zinc-100 focus:outline-none focus:border-amber-500/80 transition-all text-xs"
-                  />
-                </div>
-
-                {/* Save Sale Button */}
-                <button
-                  type="submit"
-                  disabled={vendedores.length === 0 || canais.length === 0}
-                  className="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-bold rounded-xl text-xs transition-all shadow-md shadow-amber-500/10 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Salvar Venda
-                </button>
-
-              </form>
-            </GlassCard>
 
           </div>
 

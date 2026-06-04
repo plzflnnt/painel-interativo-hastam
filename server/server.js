@@ -327,6 +327,78 @@ app.delete('/api/vendas/:id', authMiddleware, async (req, res) => {
     return res.status(500).json({ message: 'Erro ao excluir venda.' });
   }
 });
+// GET: List all sales chronologically
+app.get('/api/vendas', authMiddleware, async (req, res) => {
+  try {
+    const db = await getDatabase();
+    const sales = await db.all(`
+      SELECT v.id, v.categoria, v.modelo_carro, v.valor, v.data_venda,
+             v.vendedor_id, v.origem_id,
+             vd.nome as vendedor_nome, co.nome as origem_nome
+      FROM vendas v
+      JOIN vendedores vd ON v.vendedor_id = vd.id
+      JOIN canais_origem co ON v.origem_id = co.id
+      ORDER BY v.data_venda DESC
+    `);
+    return res.json(sales);
+  } catch (error) {
+    console.error('Erro ao buscar listagem de vendas:', error);
+    return res.status(500).json({ message: 'Erro ao buscar listagem de vendas.' });
+  }
+});
+
+// PUT: Edit existing sale
+app.put('/api/vendas/:id', authMiddleware, async (req, res) => {
+  const { id } = req.params;
+  const { categoria, modelo_carro, vendedor_id, origem_id, valor, data_venda } = req.body;
+
+  if (!categoria || !modelo_carro || !vendedor_id || !origem_id || valor === undefined || !data_venda) {
+    return res.status(400).json({ message: 'Todos os campos obrigatórios da venda devem ser informados.' });
+  }
+
+  if (categoria !== 'importacao' && categoria !== 'estoque') {
+    return res.status(400).json({ message: 'Categoria inválida. Deve ser "importacao" ou "estoque".' });
+  }
+
+  const valorReais = parseFloat(valor);
+  if (isNaN(valorReais) || valorReais <= 0) {
+    return res.status(400).json({ message: 'O valor da venda deve ser um número positivo.' });
+  }
+  const valorCentavos = Math.round(valorReais * 100);
+
+  try {
+    const db = await getDatabase();
+
+    // Verify sale exists
+    const sale = await db.get('SELECT id FROM vendas WHERE id = ?', [id]);
+    if (!sale) {
+      return res.status(404).json({ message: 'Venda não encontrada.' });
+    }
+
+    // Verify relations exist
+    const vendor = await db.get('SELECT id FROM vendedores WHERE id = ?', [vendedor_id]);
+    if (!vendor) {
+      return res.status(400).json({ message: 'Vendedor não encontrado.' });
+    }
+
+    const origin = await db.get('SELECT id FROM canais_origem WHERE id = ?', [origem_id]);
+    if (!origin) {
+      return res.status(400).json({ message: 'Canal de origem não encontrado.' });
+    }
+
+    await db.run(`
+      UPDATE vendas 
+      SET categoria = ?, modelo_carro = ?, vendedor_id = ?, origem_id = ?, valor = ?, data_venda = ?
+      WHERE id = ?
+    `, [categoria, modelo_carro.trim(), vendedor_id, origem_id, valorCentavos, data_venda, id]);
+
+    return res.json({ message: 'Venda atualizada com sucesso.' });
+  } catch (error) {
+    console.error('Erro ao atualizar venda:', error);
+    return res.status(500).json({ message: 'Erro ao atualizar venda.' });
+  }
+});
+
 
 // GET: Export sales in period
 app.get('/api/vendas/exportar', authMiddleware, async (req, res) => {

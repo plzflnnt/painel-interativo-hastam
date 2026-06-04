@@ -246,6 +246,14 @@ export default function Dashboard() {
               Dashboard
             </Link>
             <Link 
+              to="/vendas" 
+              className={`text-xs uppercase tracking-wider font-semibold transition-colors ${
+                location.pathname === '/vendas' ? 'text-amber-500' : 'text-zinc-500 hover:text-zinc-300'
+              }`}
+            >
+              Vendas
+            </Link>
+            <Link 
               to="/configuracoes" 
               className={`text-xs uppercase tracking-wider font-semibold transition-colors ${
                 location.pathname === '/configuracoes' ? 'text-amber-500' : 'text-zinc-500 hover:text-zinc-300'
